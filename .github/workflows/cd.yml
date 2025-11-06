@@ -12,12 +12,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Setup Python (CI sanity check)
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ secrets.PY_VERSION || '3.12' }}
+          # Keep this simple. Change if you really need to control via a secret.
+          python-version: '3.12'
 
-      - name: Install deps (verify)
+      - name: Install deps (verify build)
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
@@ -49,11 +50,16 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             set -e
+
             APP_DIR="${{ secrets.APP_DIR }}"
+            SERVICE_NAME="${{ secrets.SERVICE_NAME }}"
+            ENV_FILE="/etc/systemd/system/${{ secrets.SERVICE_NAME }}.env"
+
+            # 1) Unpack code to APP_DIR
             mkdir -p "$APP_DIR"
             tar -xzf /tmp/release.tgz -C "$APP_DIR"
 
-            # Python venv
+            # 2) Python venv + deps
             if [ ! -d "$APP_DIR/venv" ]; then
               python3 -m venv "$APP_DIR/venv"
             fi
@@ -62,27 +68,27 @@ jobs:
               "$APP_DIR/venv/bin/pip" install -r "$APP_DIR/requirements.txt"
             fi
 
-            # Alembic migrations (optional)
+            # 3) Optional Alembic migrations
             if [ -f "$APP_DIR/alembic.ini" ]; then
               "$APP_DIR/venv/bin/alembic" -c "$APP_DIR/alembic.ini" upgrade head || true
             fi
 
-            # ENV vars into systemd env file (no .env)
-            ENV_FILE="/etc/systemd/system/${{ secrets.SERVICE_NAME }}.env"
-            sudo bash -c 'cat > '"$ENV_FILE" <<'ENVEOF'
+            # 4) Write env vars (no .env needed)
+            sudo bash -c "cat > '$ENV_FILE' <<'ENVEOF'
 ${{ secrets.ENV_VARS }}
-ENVEOF
+ENVEOF"
 
-            # Drop-in to load EnvironmentFile
-            DROPIN_DIR="/etc/systemd/system/${{ secrets.SERVICE_NAME }}.d"
+            # 5) Ensure systemd drop-in loads env file
+            DROPIN_DIR="/etc/systemd/system/${SERVICE_NAME}.d"
             sudo mkdir -p "$DROPIN_DIR"
-            sudo bash -c 'cat > '"$DROPIN_DIR/10-env.conf" <<'EOD'
+            sudo bash -c "cat > '$DROPIN_DIR/10-env.conf' <<EOD
 [Service]
-EnvironmentFile=/etc/systemd/system/fastapi.service.env
-EOD
+EnvironmentFile=$ENV_FILE
+EOD"
 
+            # 6) Reload + restart service and nginx
             sudo systemctl daemon-reload
-            sudo systemctl restart "${{ secrets.SERVICE_NAME }}"
-            sudo systemctl status "${{ secrets.SERVICE_NAME }}" --no-pager -l || true
+            sudo systemctl restart "$SERVICE_NAME"
+            sudo systemctl status "$SERVICE_NAME" --no-pager -l || true
 
             sudo nginx -t && sudo systemctl reload nginx

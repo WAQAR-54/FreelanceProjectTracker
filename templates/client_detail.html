@@ -1,0 +1,305 @@
+<!-- templates/client_detail.html -->
+<!--
+ULTRA-GROOMED VERSION (Dark + Colorful + UX polish)
+────────────────────────────────────────────────────
+• Gradient header + avatar with neon ring
+• Info badges (Active/Inactive) + mini stats
+• Contact chips with copy-to-clipboard
+• Clean 2-column info grid with hover highlights
+• Quick actions (gradient buttons) + sticky footer back link
+• Fully responsive; all CSS/JS inline; no external assets
+• Every section documented so code is self-explanatory
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Client — {{ client.name }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    /* ─────────────────────────────────
+       🎨 THEME TOKENS
+       ───────────────────────────────── */
+    :root{
+      --bg:#090d17;         /* deep black-blue */
+      --card:#0f172a;       /* dark panel */
+      --card-2:#111827;     /* darker panel */
+      --border:#1f2937;     /* border */
+      --muted:#94a3b8;      /* muted text */
+      --text:#e2e8f0;       /* main text */
+      --link:#60a5fa;       /* link base */
+      --link-2:#93c5fd;     /* link hover */
+      --c1:#38bdf8;         /* cyan */
+      --c2:#8b5cf6;         /* violet */
+      --c3:#10b981;         /* emerald */
+      --warn:#f59e0b;       /* amber */
+      --danger:#ef4444;     /* red */
+      --ok:#22c55e;         /* green */
+      --shadow:0 0 18px rgba(56,189,248,.18);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background: radial-gradient(1200px 600px at 20% -10%, rgba(99,102,241,.12), transparent 60%),
+                  radial-gradient(900px 600px at 100% 0%, rgba(56,189,248,.10), transparent 60%),
+                  var(--bg);
+      color:var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell;
+      line-height:1.55;
+    }
+    a{color:var(--link);text-decoration:none}
+    a:hover{color:var(--link-2);text-decoration:underline}
+
+    /* ─────────────────────────────────
+       📐 LAYOUT
+       ───────────────────────────────── */
+    .container{max-width:1000px;margin:48px auto;padding:0 20px}
+    .header-strip{height:4px;border-radius:8px;margin-bottom:18px;
+      background:linear-gradient(90deg,var(--c1),var(--c2),var(--c3)); box-shadow:var(--shadow);}
+
+    /* Top header block with avatar + title + badges */
+    .head{
+      display:flex; align-items:center; gap:16px; margin-bottom:16px;
+    }
+    .avatar-wrap{
+      position:relative; width:64px; height:64px; border-radius:50%;
+      display:grid; place-items:center; isolation:isolate;
+    }
+    /* neon ring */
+    .avatar-wrap::before{
+      content:""; position:absolute; inset:-3px; border-radius:inherit;
+      background:conic-gradient(from 180deg, var(--c1), var(--c2), var(--c3), var(--c1));
+      filter: blur(6px); opacity:.7; z-index:-1;
+    }
+    .avatar{
+      width:64px; height:64px; border-radius:50%;
+      display:grid; place-items:center;
+      background:linear-gradient(135deg,#0b1220,#0f1b33);
+      border:1px solid var(--border);
+      color:#cbd5e1; font-weight:800; letter-spacing:.03em;
+    }
+    .title{font-size:28px;font-weight:900;letter-spacing:.01em}
+    .subtitle{color:var(--muted);margin-top:2px}
+
+    .badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+    .badge{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700;
+      border:1px solid var(--border); background:#0b1220;
+    }
+    .badge.ok{color:var(--ok); border-color: rgba(34,197,94,.45)}
+    .badge.warn{color:var(--warn); border-color: rgba(245,158,11,.45)}
+    .badge.id{color:#cbd5e1}
+
+    /* Cards */
+    .card{
+      background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px;
+      box-shadow:0 0 12px rgba(0,0,0,.2);
+      transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+    }
+    .card:hover{ transform:translateY(-2px); box-shadow:0 12px 28px rgba(0,0,0,.35); border-color:#22314a; }
+
+    .grid{display:grid; grid-template-columns: 220px 1fr; gap:12px}
+    .row{display:contents}
+    .label{
+      color:var(--muted); padding:10px 0; border-bottom:1px dashed var(--border);
+      text-transform:uppercase; letter-spacing:.05em; font-size:11px;
+    }
+    .val{
+      padding:10px 0; border-bottom:1px dashed var(--border);
+      transition:background .2s ease, box-shadow .2s ease;
+    }
+    .val:hover{ background:rgba(99,102,241,.06); box-shadow:inset 0 1px 0 rgba(255,255,255,.02); }
+    .row:last-child .label, .row:last-child .val{ border-bottom:none }
+
+    /* Contact chips (copyable) */
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .chip{
+      display:inline-flex; align-items:center; gap:8px; padding:8px 10px;
+      background:var(--card-2); border:1px solid var(--border); border-radius:10px;
+      font-size:13px; color:#dbeafe; cursor:copy; transition:transform .15s ease, border-color .2s;
+    }
+    .chip:hover{ transform:translateY(-1px); border-color:#263247 }
+    .chip .ico{opacity:.85}
+
+    /* Quick stats bar */
+    .stats{display:grid; grid-template-columns: repeat(3,1fr); gap:12px; margin-top:12px}
+    .stat{
+      background:linear-gradient(180deg,rgba(99,102,241,.10),rgba(99,102,241,.04));
+      border:1px solid #202a41; border-radius:12px; padding:12px 14px;
+    }
+    .stat .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+    .stat .v{font-size:18px;font-weight:800;margin-top:2px}
+
+    /* Quick action buttons */
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    .btn{
+      display:inline-block; padding:10px 14px; font-weight:700; color:#fff; border:none; border-radius:10px;
+      background:linear-gradient(90deg,var(--c1),var(--c2)); box-shadow:0 0 14px rgba(56,189,248,.35);
+      text-decoration:none; transition:transform .25s ease, box-shadow .25s ease, filter .25s ease;
+    }
+    .btn:hover{ transform:translateY(-2px); box-shadow:0 0 18px rgba(139,92,246,.55); filter:saturate(1.15) }
+    .btn.alt{ background:linear-gradient(90deg,#16a34a,#22c55e); box-shadow:0 0 14px rgba(34,197,94,.35) }
+
+    /* Footer back link sticky */
+    .footer{
+      position:sticky; bottom:12px; margin-top:22px;
+      display:flex; justify-content:flex-start
+    }
+    .back{
+      display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:999px;
+      background:#0b1220; border:1px solid var(--border); color:var(--link);
+      text-decoration:none; font-weight:700; transition:transform .25s ease, border-color .25s ease, color .25s ease;
+    }
+    .back:hover{ transform:translateY(-1px); color:var(--link-2); border-color:#263247; text-decoration:none }
+    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:11px; color:#cbd5e1}
+
+    /* Responsive */
+    @media (max-width: 720px){
+      .grid{ grid-template-columns: 1fr }
+      .label{ padding-top:14px }
+      .val{ padding-top:2px }
+      .stats{ grid-template-columns:1fr }
+      .head{ align-items:flex-start; }
+    }
+    /* Focus outlines for accessibility */
+    a:focus, button:focus, .chip:focus{ outline:2px solid var(--c1); outline-offset:2px; border-radius:10px }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header-strip"></div>
+
+    <!-- Top Head: Avatar + Title + Badges -->
+    <div class="head">
+      <!-- Avatar Initials (auto from name; fallback SC) -->
+      <div class="avatar-wrap" title="Client Avatar">
+        <div class="avatar">
+          {% set initials = (client.name or 'SC').split() %}
+          {{ (initials[0][0] ~ (initials[1][0] if initials|length>1 else '')) | upper }}
+        </div>
+      </div>
+
+      <div>
+        <div class="title">{{ client.name }}</div>
+        <div class="subtitle">Full profile for the selected client</div>
+
+        <div class="badges">
+          <!-- Status example badge (toggle ok/warn based on your logic) -->
+          <span class="badge ok">● Active</span>
+          <span class="badge id">ID: #{{ client.id }}</span>
+          {% if client.company_name %}
+            <span class="badge" style="color:#dbeafe">🏢 {{ client.company_name }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact chips (copy-to-clipboard) -->
+    <div class="chips" aria-label="Quick contacts">
+      <div class="chip" data-copy="{{ client.email or '' }}" title="Click to copy email">
+        <span class="ico">✉️</span>
+        <span>{{ client.email or "—" }}</span>
+      </div>
+      <div class="chip" data-copy="{{ client.phone or '' }}" title="Click to copy phone">
+        <span class="ico">📞</span>
+        <span>{{ client.phone or "—" }}</span>
+      </div>
+      <div class="chip" data-copy="{{ client.address or '' }}" title="Click to copy address">
+        <span class="ico">📍</span>
+        <span>{{ client.address or "—" }}</span>
+      </div>
+    </div>
+
+    <!-- Profile card (details grid) -->
+    <div class="card" style="margin-top:14px;">
+      <div class="grid">
+        <div class="row">
+          <div class="label">Client ID</div>
+          <div class="val">{{ client.id }}</div>
+        </div>
+        <div class="row">
+          <div class="label">Name</div>
+          <div class="val"><strong>{{ client.name }}</strong></div>
+        </div>
+        <div class="row">
+          <div class="label">Email</div>
+          <div class="val">{{ client.email or "—" }}</div>
+        </div>
+        <div class="row">
+          <div class="label">Phone</div>
+          <div class="val">{{ client.phone or "—" }}</div>
+        </div>
+        <div class="row">
+          <div class="label">Company</div>
+          <div class="val">{{ client.company_name or "—" }}</div>
+        </div>
+        <div class="row">
+          <div class="label">Address</div>
+          <div class="val">{{ client.address or "—" }}</div>
+        </div>
+      </div>
+
+      <!-- Quick mini stats (optional: replace with live data) -->
+      <div class="stats" role="group" aria-label="Mini stats">
+        <div class="stat">
+          <div class="k">Total Projects</div>
+          <div class="v">{{ client.projects_count if client.projects_count is defined else "—" }}</div>
+        </div>
+        <div class="stat">
+          <div class="k">Open Tasks</div>
+          <div class="v">{{ client.open_tasks if client.open_tasks is defined else "—" }}</div>
+        </div>
+        <div class="stat">
+          <div class="k">Outstanding (PKR)</div>
+          <div class="v">{{ "{:,.0f}".format(client.outstanding) if client.outstanding is defined else "—" }}</div>
+        </div>
+      </div>
+
+      <!-- Quick actions 
+      <div class="actions" aria-label="Quick actions">
+        <a class="btn" href="/projects/list?client_id={{ client.id }}" target="_blank" rel="noopener">View Projects</a>
+        <a class="btn alt" href="/tasks/list?client_id={{ client.id }}" target="_blank" rel="noopener">View Tasks</a>
+        <a class="btn" href="/invoices/list?client_id={{ client.id }}" target="_blank" rel="noopener">View Invoices</a>
+      </div>
+    </div>-->
+
+    <!-- Sticky footer back link -->
+    <div class="footer">
+      <a href="/ui/projects" class="back" title="Back to Projects">
+        <span>← Back to Projects</span>
+        <span class="kbd">Esc</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────
+       🧩 JS: Copy-to-clipboard + Esc back
+       ───────────────────────────────── -->
+  <script>
+    // Copy chip text on click
+    document.addEventListener('click', (e) => {
+      const chip = e.target.closest('.chip');
+      if(!chip) return;
+      const text = chip.getAttribute('data-copy') || '';
+      if(!text.trim()) return;
+      navigator.clipboard.writeText(text).then(() => {
+        const old = chip.innerHTML;
+        chip.innerHTML = '<span class="ico">✅</span><span>Copied!</span>';
+        setTimeout(()=> chip.innerHTML = old, 900);
+      });
+    });
+
+    // Press ESC to go back to projects
+    document.addEventListener('keydown', (e) => {
+      if(e.key === 'Escape') {
+        window.location.href = '/ui/projects';
+      }
+    });
+  </script>
+</body>
+</html>

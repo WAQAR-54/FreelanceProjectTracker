@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Projects — List</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{
+    --bg:#0b0f1a; --panel:#0f172a; --text:#e6edf5; --muted:#9aa7b8;
+    --border:#1f2a40; --line:#182233;
+    --blue:#3b82f6; --green:#22c55e; --amber:#f59e0b; --emerald:#10b981;
+    --chip:#091020; --chip-b:#1a2741;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+       font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu}
+  .wrap{max-width:1600px;margin:32px auto;padding:0 20px;}
+  .title{font-weight:900;font-size:26px;margin-bottom:6px}
+  .muted{color:var(--muted)}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px;}
+
+  table{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed}
+  thead th{
+    background:#0f172a;
+    border-bottom:1px solid var(--border);color:var(--muted);
+    text-align:left;font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:10px 8px
+  }
+  tbody td{padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  tbody tr:hover td{background:rgba(255,255,255,.02)}
+
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas;color:#cbd5e1}
+  .nowrap{white-space:nowrap}
+  .desc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+  /* column widths (adjusted) */
+  .c-sn{width:50px}
+  .c-id{width:90px}
+  .c-title{width:260px}
+  .c-desc{width:360px}  /* smaller now */
+  .c-client{width:220px}
+  .c-dates{width:200px}
+  .c-budget{width:130px}
+  .c-status{width:130px}
+  .c-steps{width:260px}
+
+  .pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;background:#0b1220;border:1px solid var(--border)}
+  .date{display:block}
+  .date .k{color:var(--muted);font-size:11px;margin-right:6px}
+  .date .v{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas}
+
+  /* Client link */
+  a.link{
+    color:#7dc1ff;
+    font-weight:700;
+    text-decoration:none;
+    position:relative;
+    transition:color .2s ease, text-shadow .2s ease;
+  }
+  a.link::after{
+    content:"";
+    position:absolute;left:0;bottom:-2px;width:0;height:1px;
+    background:linear-gradient(90deg,#60a5fa,#3b82f6);
+    transition:width .3s ease;
+  }
+  a.link:hover{color:#cbe7ff;text-shadow:0 0 8px rgba(96,165,250,.6);}
+  a.link:hover::after{width:100%;}
+
+  tr[data-status] td:first-child{border-left:4px solid transparent;padding-left:6px}
+  tr[data-status="planned"]   td:first-child{border-left-color:var(--blue)}
+  tr[data-status="ongoing"]   td:first-child{border-left-color:var(--green)}
+  tr[data-status="on_hold"]   td:first-child{border-left-color:var(--amber)}
+  tr[data-status="completed"] td:first-child{border-left-color:var(--emerald)}
+
+  .tag{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800;
+       text-transform:capitalize;border:1px solid var(--border)}
+  .planned{background:rgba(59,130,246,.14);color:var(--blue)}
+  .ongoing{background:rgba(34,197,94,.14);color:var(--green)}
+  .on_hold{background:rgba(245,158,11,.14);color:var(--amber)}
+  .completed{background:rgba(16,185,129,.14);color:var(--emerald)}
+
+  /* Steps — contained and centered */
+  .step-caps{
+    display:flex;flex-wrap:nowrap;gap:8px;
+    justify-content:flex-start;align-items:center;
+    overflow:hidden;max-width:100%;
+  }
+  .cap{
+    display:inline-flex;align-items:center;gap:6px;
+    white-space:nowrap;padding:4px 10px;border-radius:999px;
+    font-size:11px;font-weight:800;border:1px solid var(--chip-b);
+    background:var(--chip);color:#b6c6e3;flex-shrink:0;
+  }
+  .dot{width:8px;height:8px;border-radius:50%}
+  .cap.active.ongoing   { border-color:rgba(34,197,94,.38);background:rgba(34,197,94,.15);color:#d7fbe4 }
+  .cap.active.on_hold   { border-color:rgba(245,158,11,.38);background:rgba(245,158,11,.15);color:#ffeacc }
+  .cap.active.completed { border-color:rgba(16,185,129,.38);background:rgba(16,185,129,.15);color:#d4fff1 }
+  .cap.active .dot{ box-shadow:0 0 6px currentColor }
+  .cap.ongoing .dot   { background:var(--green) }
+  .cap.on_hold .dot   { background:var(--amber) }
+  .cap.completed .dot { background:var(--emerald) }
+
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="title">Projects</div>
+    <div class="muted" style="margin-bottom:12px;">Steps inside container • Compact description • No overflow.</div>
+
+    <div class="card">
+      <table>
+        <colgroup>
+          <col class="c-sn"><col class="c-id"><col class="c-title"><col class="c-desc">
+          <col class="c-client"><col class="c-dates"><col class="c-budget"><col class="c-status"><col class="c-steps">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>#</th><th>ID</th><th>Title</th><th>Description</th>
+            <th>Client</th><th>Dates</th><th>Budget</th><th>Status</th><th>Steps</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in projects %}
+          {% set st = (p.status or 'planned')|lower %}
+          <tr data-status="{{ st }}">
+            <td class="mono nowrap">{{ loop.index }}</td>
+            <td class="mono nowrap">{{ p.id }}</td>
+            <td class="nowrap"><strong>{{ p.title }}</strong></td>
+            <td>{% if p.description %}<div class="desc">{{ p.description }}</div>{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td><a class="link" href="/clients/view/{{ p.client_id }}" target="_blank">{{ p.client_name }}</a></td>
+            <td class="nowrap">
+              <span class="date"><span class="k">Start:</span><span class="v">{{ p.start_date or "—" }}</span></span>
+              <span class="date"><span class="k">End:</span><span class="v">{{ p.end_date or "—" }}</span></span>
+            </td>
+            <td class="nowrap">{% if p.budget %}<span class="pill">PKR {{ "{:,.0f}".format(p.budget) }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td class="nowrap"><span class="tag {{ st }}">{{ st|title }}</span></td>
+            <td>
+              <div class="step-caps">
+                <span class="cap ongoing {% if st=='ongoing' %}active ongoing{% endif %}"><span class="dot"></span> Ongoing</span>
+                <span class="cap on_hold {% if st=='on_hold' %}active on_hold{% endif %}"><span class="dot"></span> On Hold</span>
+                <span class="cap completed {% if st=='completed' %}active completed{% endif %}"><span class="dot"></span> Done</span>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+          {% if projects|length == 0 %}
+          <tr><td colspan="9" class="muted">No projects found.</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

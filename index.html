@@ -1,0 +1,122 @@
+<!-- index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Send Email • Zoho SMTP</title>
+<style>
+  :root{
+    --bg: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #a855f7 100%);
+    --card-bg: #0b1020cc;
+    --input-bg: #0b1020;
+    --ring: #60a5fa;
+    --ok: #22c55e;
+    --err: #ef4444;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; display:grid; place-items:center;
+    background: radial-gradient(1000px 600px at 20% 10%, #0ea5e933, transparent 60%),
+                radial-gradient(900px 700px at 80% 30%, #a855f733, transparent 60%),
+                var(--bg);
+    color:#e5e7eb; font-family: ui-sans-serif, system-ui, Segoe UI, Roboto, Arial, sans-serif;
+  }
+  .card{
+    width:min(92vw,720px);
+    background: backdrop-filter: blur(10px);
+    background-color: var(--card-bg);
+    border:1px solid #2a2f45; border-radius:22px; padding:24px;
+    box-shadow: 0 25px 60px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  h1{margin:0 0 4px; font-size:28px; letter-spacing:.2px}
+  p.sub{margin:0 0 18px; color:#a3a7c0; font-size:14px}
+  label{display:block; font-weight:600; margin:12px 0 6px}
+  input, textarea{
+    width:100%; background:var(--input-bg); color:#cfd3e6;
+    border:1px solid #27304a; border-radius:12px; outline:0;
+    padding:12px 14px; font-size:14px; transition:border-color .2s, box-shadow .2s;
+  }
+  input:focus, textarea:focus{ border-color:var(--ring); box-shadow:0 0 0 4px #60a5fa22 }
+  textarea{ min-height:160px; resize:vertical }
+  .row{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
+  .btn{
+    margin-top:16px; padding:12px 16px; border:0; cursor:pointer;
+    color:#0b1020; background:linear-gradient(135deg,#a7f3d0,#60a5fa);
+    font-weight:700; border-radius:12px; transition: transform .08s ease;
+  }
+  .btn:active{ transform: translateY(1px) }
+  .meta{ margin-top:10px; font-size:12px; color:#9aa3bf }
+  .toast{
+    position:fixed; top:14px; left:50%; transform:translateX(-50%);
+    padding:10px 14px; border-radius:12px; backdrop-filter: blur(10px);
+    background:#0b1020ee; border:1px solid #334155; color:#e5e7eb; font-weight:600;
+    box-shadow: 0 20px 40px rgba(0,0,0,.35); display:none;
+  }
+  .toast.ok{ border-color:#14532d; color:#bbf7d0 }
+  .toast.err{ border-color:#7f1d1d; color:#fecaca }
+  .hint{ font-size:12px; color:#a3a7c0 }
+</style>
+</head>
+<body>
+  <div class="toast" id="toast"></div>
+
+  <div class="card">
+    <h1>Send Email</h1>
+    <p class="sub">Zoho SMTP • simple form • no framework</p>
+
+    <form id="mailForm">
+      <label for="to">To (receiver)</label>
+      <input id="to" name="to" type="email" placeholder="recipient@example.com" required />
+
+      <div class="row">
+        <div>
+          <label for="subject">Subject</label>
+          <input id="subject" name="subject" type="text" value="Hello from Zoho SMTP" />
+        </div>
+        <div>
+          <label>Sender</label>
+          <input type="text" value="Configured in server.py" disabled />
+          <div class="hint">Change in server.py → SENDER</div>
+        </div>
+      </div>
+
+      <label for="body">Message</label>
+      <textarea id="body" name="body" placeholder="Type your message..." required></textarea>
+
+      <button class="btn" type="submit">Send Email</button>
+      <div class="meta">POST → <code>/send</code></div>
+    </form>
+  </div>
+
+<script>
+const toast = document.getElementById('toast');
+function showToast(msg, ok=true){
+  toast.textContent = msg;
+  toast.className = 'toast ' + (ok ? 'ok' : 'err');
+  toast.style.display = 'block';
+  setTimeout(()=> toast.style.display='none', 3000);
+}
+
+document.getElementById('mailForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = new URLSearchParams(fd);
+  showToast('Sending...', true);
+
+  try{
+    const res = await fetch('/send', {
+      method:'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body
+    });
+    const data = await res.json();
+    if(data.ok){ showToast('✅ ' + (data.message || 'Sent!'), true); e.target.reset(); }
+    else{ showToast('❌ ' + (data.error || 'Failed'), false); }
+  }catch(err){
+    showToast('❌ Network error', false);
+  }
+});
+</script>
+</body>
+</html>

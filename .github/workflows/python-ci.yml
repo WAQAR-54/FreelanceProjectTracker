@@ -1,0 +1,63 @@
+name: Python CI (FastAPI)
+
+on:
+  push:
+    branches: main
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: FreelanceProjectTracker
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('FreelanceProjectTracker/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      # Optional: style/lint if you add these to requirements.txt
+      - name: Run Ruff (optional)
+        run: |
+          if python -c "import importlib; exit(0 if importlib.util.find_spec('ruff') else 1)"; then
+            ruff check .
+          else
+            echo "Ruff not installed; skipping."
+          fi
+
+      - name: Run Black check (optional)
+        run: |
+          if python -c "import importlib; exit(0 if importlib.util.find_spec('black') else 1)"; then
+            black --check .
+          else
+            echo "Black not installed; skipping."
+          fi
+
+      - name: Run tests (pytest if present)
+        run: |
+          if [ -d tests ]; then
+            if python -c "import importlib; exit(0 if importlib.util.find_spec('pytest') else 1)"; then
+              pytest -q
+            else
+              echo "pytest not installed; add it to requirements.txt to enable tests."
+            fi
+          else
+            echo "No tests/ directory; skipping pytest."
+          fi

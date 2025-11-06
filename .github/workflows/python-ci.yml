@@ -3,24 +3,23 @@ name: Python CI (FastAPI)
 on:
   push:
     branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
   ci:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: FreelanceProjectTracker
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Show tree (debug)
+      - name: Show repo tree (debug)
         run: |
-          pwd
+          echo "PWD=$(pwd)"
           ls -la
-          echo "---- req file? ----"
-          [ -f requirements.txt ] && echo "requirements.txt FOUND" || (echo "requirements.txt MISSING" && exit 1)
+          echo "---- try subfolder ----"
+          ls -la FreelanceProjectTracker || true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -31,35 +30,48 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt', 'FreelanceProjectTracker/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Install dependencies
+      - name: Install dependencies (auto-detect requirements.txt)
         run: |
+          set -e
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          if [ -f requirements.txt ]; then
+            echo "Using requirements.txt at repo root"
+            pip install -r requirements.txt
+          elif [ -f FreelanceProjectTracker/requirements.txt ]; then
+            echo "Using FreelanceProjectTracker/requirements.txt"
+            pip install -r FreelanceProjectTracker/requirements.txt
+          else
+            echo "ERROR: requirements.txt not found (root or FreelanceProjectTracker/)."
+            exit 1
+          fi
 
+      # Optional linters
       - name: Run Ruff (optional)
         run: |
-          if python -c "import importlib; exit(0 if importlib.util.find_spec('ruff') else 1)"; then
-            ruff check .
-          else
-            echo "Ruff not installed; skipping."
-          fi
+          python - <<'PY'
+          import importlib, subprocess, sys
+          sys.exit(subprocess.call(["ruff","check","."])) if importlib.util.find_spec("ruff") else print("Ruff not installed; skipping.")
+          PY
 
       - name: Run Black check (optional)
         run: |
-          if python -c "import importlib; exit(0 if importlib.util.find_spec('black') else 1)"; then
-            black --check .
-          else
-            echo "Black not installed; skipping."
-          fi
+          python - <<'PY'
+          import importlib, subprocess, sys
+          sys.exit(subprocess.call(["black","--check","."])) if importlib.util.find_spec("black") else print("Black not installed; skipping.")
+          PY
 
-      - name: Run tests (pytest if present)
+      - name: Run tests (optional, if tests/ exists)
         run: |
           if [ -d tests ]; then
-            if python -c "import importlib; exit(0 if importlib.util.find_spec('pytest') else 1)"; then
+            if python - <<'PY'
+import importlib, sys
+sys.exit(0 if importlib.util.find_spec("pytest") else 1)
+PY
+            then
               pytest -q
             else
               echo "pytest not installed; add it to requirements.txt to enable tests."

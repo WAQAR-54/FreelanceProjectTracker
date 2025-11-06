@@ -14,12 +14,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Show repo tree (debug)
+      # Detect project dir and requirements path (root or subfolder)
+      - name: Detect project layout
+        id: detect
         run: |
+          set -e
           echo "PWD=$(pwd)"
-          ls -la
-          echo "---- try subfolder ----"
-          ls -la FreelanceProjectTracker || true
+          ls -la || true
+
+          if [ -f requirements.txt ]; then
+            echo "REQ=requirements.txt" >> "$GITHUB_ENV"
+            echo "APP_DIR=." >> "$GITHUB_ENV"
+            echo "Found requirements.txt at repo root"
+          elif [ -f FreelanceProjectTracker/requirements.txt ]; then
+            echo "REQ=FreelanceProjectTracker/requirements.txt" >> "$GITHUB_ENV"
+            echo "APP_DIR=FreelanceProjectTracker" >> "$GITHUB_ENV"
+            echo "Found requirements.txt in FreelanceProjectTracker/"
+            ls -la FreelanceProjectTracker || true
+          else
+            echo "ERROR: requirements.txt not found (root or FreelanceProjectTracker/)."
+            exit 1
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -34,48 +49,59 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Install dependencies (auto-detect requirements.txt)
+      - name: Install dependencies
         run: |
           set -e
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then
-            echo "Using requirements.txt at repo root"
-            pip install -r requirements.txt
-          elif [ -f FreelanceProjectTracker/requirements.txt ]; then
-            echo "Using FreelanceProjectTracker/requirements.txt"
-            pip install -r FreelanceProjectTracker/requirements.txt
+          pip install -r "$REQ"
+
+      # ---------- OPTIONAL QUALITY STEPS (auto-skip if tool not installed) ----------
+      - name: Ruff (optional)
+        run: |
+          if command -v ruff >/dev/null 2>&1; then
+            echo "Running ruff…"
+            ruff check "$APP_DIR"
           else
-            echo "ERROR: requirements.txt not found (root or FreelanceProjectTracker/)."
-            exit 1
+            echo "Ruff not installed; skipping. (Add 'ruff' to $REQ to enable.)"
           fi
 
-      # Optional linters
-      - name: Run Ruff (optional)
+      - name: Black check (optional)
         run: |
-          python - <<'PY'
-          import importlib, subprocess, sys
-          sys.exit(subprocess.call(["ruff","check","."])) if importlib.util.find_spec("ruff") else print("Ruff not installed; skipping.")
-          PY
+          if command -v black >/dev/null 2>&1; then
+            echo "Running black --check…"
+            black --check "$APP_DIR"
+          else
+            echo "Black not installed; skipping. (Add 'black' to $REQ to enable.)"
+          fi
 
-      - name: Run Black check (optional)
+      - name: Pytest (optional)
+        env:
+          PYTHONPATH: ${{ env.PYTHONPATH }}:${{ env.APP_DIR }}
         run: |
-          python - <<'PY'
-          import importlib, subprocess, sys
-          sys.exit(subprocess.call(["black","--check","."])) if importlib.util.find_spec("black") else print("Black not installed; skipping.")
-          PY
-
-      - name: Run tests (optional, if tests/ exists)
-        run: |
-          if [ -d tests ]; then
-            if python - <<'PY'
-          import importlib, sys
-          sys.exit(0 if importlib.util.find_spec("pytest") else 1)
-            PY
-            then
-              pytest -q
+          if [ -d tests ] || [ -d "$APP_DIR/tests" ]; then
+            if python -m pip show pytest >/dev/null 2>&1; then
+              echo "Running pytest…"
+              # Prefer project-local tests if present, else repo-level
+              if [ -d "$APP_DIR/tests" ]; then
+                pytest -q "$APP_DIR/tests"
+              else
+                pytest -q
+              fi
             else
-              echo "pytest not installed; add it to requirements.txt to enable tests."
+              echo "pytest not installed; skipping. (Add 'pytest' to $REQ to enable.)"
             fi
           else
             echo "No tests/ directory; skipping pytest."
           fi
+      # ------------------------------------------------------------------------------
+
+      # Helpful debug (kept last so it doesn’t spam logs unless needed)
+      - name: Show layout (debug)
+        if: always()
+        run: |
+          echo "APP_DIR=$APP_DIR"
+          echo "REQ=$REQ"
+          echo "Tree at repo root:"
+          ls -la
+          echo "Tree at APP_DIR:"
+          ls -la "$APP_DIR" || true

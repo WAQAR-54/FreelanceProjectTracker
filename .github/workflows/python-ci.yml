@@ -2,18 +2,25 @@ name: Python CI (FastAPI)
 
 on:
   push:
-    branches: main
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
 
 jobs:
   ci:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: FreelanceProjectTracker
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # Debug: confirm folder structure
+      - name: Show repo tree
+        run: |
+          pwd
+          ls -la
+          echo "---- inside FreelanceProjectTracker ----"
+          ls -la FreelanceProjectTracker || true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -31,33 +38,26 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r FreelanceProjectTracker/requirements.txt
 
-      # Optional: style/lint if you add these to requirements.txt
+      # Optional: linters / tests if present
       - name: Run Ruff (optional)
         run: |
-          if python -c "import importlib; exit(0 if importlib.util.find_spec('ruff') else 1)"; then
-            ruff check .
-          else
-            echo "Ruff not installed; skipping."
-          fi
+          python - <<'PY'
+          import importlib, sys, subprocess
+          if importlib.util.find_spec("ruff"):
+              sys.exit(subprocess.call(["ruff","check","FreelanceProjectTracker"]))
+          print("Ruff not installed; skipping.")
+          PY
 
-      - name: Run Black check (optional)
+      - name: Run pytest (optional)
         run: |
-          if python -c "import importlib; exit(0 if importlib.util.find_spec('black') else 1)"; then
-            black --check .
+          if [ -d FreelanceProjectTracker/tests ]; then
+            python - <<'PY'
+            import importlib, sys, subprocess
+            sys.exit(0 if importlib.util.find_spec("pytest") else (print("pytest not installed"), 0)[1])
+            PY
+            pytest -q FreelanceProjectTracker/tests
           else
-            echo "Black not installed; skipping."
-          fi
-
-      - name: Run tests (pytest if present)
-        run: |
-          if [ -d tests ]; then
-            if python -c "import importlib; exit(0 if importlib.util.find_spec('pytest') else 1)"; then
-              pytest -q
-            else
-              echo "pytest not installed; add it to requirements.txt to enable tests."
-            fi
-          else
-            echo "No tests/ directory; skipping pytest."
+            echo "No tests; skipping."
           fi

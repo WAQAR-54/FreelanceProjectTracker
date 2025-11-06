@@ -68,9 +68,9 @@ jobs:
         run: |
           if [ -d tests ]; then
             if python - <<'PY'
-import importlib, sys
-sys.exit(0 if importlib.util.find_spec("pytest") else 1)
-PY
+          import importlib, sys
+          sys.exit(0 if importlib.util.find_spec("pytest") else 1)
+            PY
             then
               pytest -q
             else

@@ -4,6 +4,8 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 
 # ✅ Apni DB URL yahan set karein
 # Agar XAMPP/MariaDB custom port (e.g., 3307) hai to port update kar dein.
+# DB_URL = "mysql+pymysql://root:@localhost:3306/freelance_project_tracker"
+
 DB_URL = "mysql+pymysql://root:@localhost:3306/freelance_project_tracker"
 
 engine = create_engine(DB_URL, pool_pre_ping=True, future=True)
